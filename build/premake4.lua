@@ -486,7 +486,7 @@ project "pprAI"
 		"steerlib",
 		"util"
 	}
-	
+buildoptions("-std=c++Ox -ggdb")
 project "curveAI"
 	language "C++"
 	kind "SharedLib"
