@@ -1,0 +1,103 @@
+PART A
+
+./steersim -testcase ../../testcases/polygons1.xml -ai collisionAI
+
+Creating spatialdatabase: gridDatabase
+Creating planning domain: gridDomain
+Created a grid database planning domain *************
+checking: ./collisionAI.dll for module
+loaded module collisionAI
+loaded module testCasePlayer
+Initializing...
+Preprocessing...
+ NO collision detected between polygon No.0 and No.1
+ NO collision detected between polygon No.0 and No.2
+ NO collision detected between polygon No.0 and No.3
+ NO collision detected between polygon No.0 and No.4
+ Collision detected between polygon No.0 and No.5 with a penetration depth of 1 and penetration vector of (-1,0,-0)
+ NO collision detected between polygon No.1 and No.2
+ NO collision detected between polygon No.1 and No.3
+ NO collision detected between polygon No.1 and No.4
+ NO collision detected between polygon No.1 and No.5
+ Collision detected between polygon No.2 and No.3 with a penetration depth of 2 and penetration vector of (-0,0,-1)
+ NO collision detected between polygon No.2 and No.4
+ Collision detected between polygon No.2 and No.5 with a penetration depth of 0.707107 and penetration vector of (0.707107,0,0.707107)
+ NO collision detected between polygon No.3 and No.4
+ Collision detected between polygon No.3 and No.5 with a penetration depth of 1.34164 and penetration vector of (0.894427,0,0.447214)
+ NO collision detected between polygon No.4 and No.5
+Simulation is running...
+Postprocessing...
+Simulated 451 frames.
+Cleaning up...
+Done.
+Removing module: testCasePlayer
+Removing module: collisionAI
+
+
+
+PART B
+$ ./steersim -testcase ../../testcases/polygons2.xml -ai collisionAI
+
+Creating spatialdatabase: gridDatabase
+Creating planning domain: gridDomain
+Created a grid database planning domain *************
+checking: ./collisionAI.dll for module
+loaded module collisionAI
+loaded module testCasePlayer
+Initializing...
+Preprocessing...
+
+(WINDOWS SAYS THE PROGRAM HAS CRASHED AT THIS POINT AND THE TERMINAL OUTPUT DOES NOT HAVE ANYTHING ELSE)
+
+
+PART C
+[this needs to be replaced with an explanation of the differences. Will do tomorrow morning]
+
+The fixed version is called polygons_2.xml
+
+Its' terminal output is
+
+$ ./steersim -testcase ../../testcases/polygons_2.xml -ai collisionAI
+
+Creating spatialdatabase: gridDatabase
+Creating planning domain: gridDomain
+Created a grid database planning domain *************
+checking: ./collisionAI.dll for module
+loaded module collisionAI
+loaded module testCasePlayer
+Initializing...
+Preprocessing...
+ Collision detected between polygon No.0 and No.1 with a penetration depth of 1 and penetration vector of (-0.8,0,0.6)
+Simulation is running...
+Postprocessing...
+Simulated 225 frames.
+Cleaning up...
+Done.
+Removing module: testCasePlayer
+Removing module: collisionAI
+
+PART D
+
+[this needs a description of the implementation and also what happened before the code was changed)
+
+It runs successfully and detects no collisions as can be seen in the following terminal output
+
+$ ./steersim -testcase ../../testcases/polygons3.xml -ai collisionAI
+
+Creating spatialdatabase: gridDatabase
+Creating planning domain: gridDomain
+Created a grid database planning domain *************
+checking: ./collisionAI.dll for module
+loaded module collisionAI
+loaded module testCasePlayer
+Initializing...
+Preprocessing...
+ NO collision detected between polygon No.0 and No.1
+Simulation is running...
+Postprocessing...
+Simulated 232 frames.
+Cleaning up...
+Done.
+Removing module: testCasePlayer
+Removing module: collisionAI
+
