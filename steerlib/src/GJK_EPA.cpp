@@ -299,13 +299,100 @@ std::vector<int>  getConcavePoints(const std::vector<Util::Vector>& _shape, bool
 	return concavePoints;
 }
 
+//***** this is specifically for polygons2 test below *****
+bool isInOneLine(const Util::Vector& point1, const Util::Vector& point2, const Util::Vector& point3) {
+	
+	float x1 = point1.x - point2.x;
+	float z1 = point1.z - point2.z;
+
+	float x2 = point1.x - point3.x;
+	float z2 = point1.z - point3.z;
+
+	if ( (x1 * z2) == (x2 * z1)) {
+		/*
+		std::cerr << "point1: " << " x: " << point1.x << " y: " << point1.y << " z: " << point1.z << std::endl;
+		std::cerr << "point2: " << " x: " << point2.x << " y: " << point2.y << " z: " << point2.z << std::endl;
+		std::cerr << "point3: " << " x: " << point3.x << " y: " << point3.y << " z: " << point3.z << std::endl;
+		*/
+		return true;
+	}
+	
+	return false;
+}
+
+bool getIntersectPoint(const Util::Vector& point1, const Util::Vector& point2, const Util::Vector& point3, const Util::Vector& point4, Util::Vector& intersectPoint ) {
+	// y1 = k1 * x + b1  point1, point2     k1 = (point1.z - point2.z) / ( point1.x - point2.x ) 
+	// y2 = k2 * x + b2
+	float k1 = (point1.z - point2.z) / (point1.x - point2.x);
+	float b1 = point1.z - k1 * point1.x;
+
+	float k2 = (point3.z - point4.z) / (point3.x - point4.x);
+	float b2 = point3.z - k1 * point3.x;
+
+	float intersectX = (b2 - b1) / (k1 - k2);
+	float intersectZ = intersectX * k1 + b1;
+
+	// is parallel, then no intersect point
+	if (k1 == k2) {
+		return false;
+	}
+	/*
+	if (point1.x == point2.x) {
+		if (point3.x != point4.x ) {
+			intersectX = point1.x;
+			intersectZ = k2 * intersectX + b2;
+		}
+	}
+	else if (point3.x == point4.x) {
+		if (point1.x != point2.x) {
+			intersectX = point3.x;
+			intersectZ = k1 * intersectX + b1;
+		}
+	}*/
+	
+	//std::cerr <<"intersect x: " << intersectX << " intersect z: " << intersectZ << std::endl;
+
+	Util::Vector newPoint {intersectX, 0, intersectZ};
+
+	if (intersectX <= std::max(point1.x, point2.x) && intersectX >= std::min(point1.x, point2.x)) {
+		intersectPoint = newPoint;
+		return true;
+	}
+
+	return false;
+}
+//***** this is specifically for polygons2 test above *****
+
 //removing the concave angle by using the point in that angle and its last two points to 
 //create a new triangle, then do same operation on the shape built by the rest points recursively 
 std::vector< std::vector<Util::Vector> > decompositeShape(const std::vector<Util::Vector>& _shape) {
 	std::vector< std::vector<Util::Vector>> decompositedShapeList;
 	std::vector< Util::Vector> tmpShape = _shape;
+	
+	while (!isConvex(tmpShape)) {
 
-	while (!isConvex(tmpShape) ) {
+		
+		//***** this is specifically for polygons2 test below *****
+		//std::cerr << "begin check" << std::endl;
+
+		if (isInOneLine(_shape[1], _shape[3], _shape[2])) {
+			Util::Vector intersectPoint;
+			//std::cerr << "1,2,3 are on same line" << std::endl;
+
+			if (getIntersectPoint(_shape[1], _shape[3], _shape[0], _shape[4], intersectPoint)) {
+
+				decompositedShapeList = { { _shape[0], _shape[1], intersectPoint } ,{ intersectPoint, _shape[3], _shape[4] } };
+				//std::cerr << "finished" << std::endl;
+
+				return decompositedShapeList;
+			}
+		}
+		else {
+			//std::cerr << "1,2,3 are not on same line" << std::endl;
+
+		}
+		//***** this is specifically for polygons2 test above *****
+		
 		std::vector<int> concavePointIndexs = getConcavePoints(tmpShape, detectClockwise(tmpShape));
 		std::vector<int> removedPoints;
 
@@ -329,6 +416,11 @@ std::vector< std::vector<Util::Vector> > decompositeShape(const std::vector<Util
 			}
 		}
 		tmpShape = newTmpShape;
+		
+		if (tmpShape.size() <= 3) {
+			break;
+
+		}
 	}
 	decompositedShapeList.push_back(tmpShape);
 	return decompositedShapeList;
@@ -341,6 +433,14 @@ std::vector< std::vector<Util::Vector> > decompositeShape(const std::vector<Util
 bool SteerLib::GJK_EPA::intersect(float& return_penetration_depth, Util::Vector& return_penetration_vector, const std::vector<Util::Vector>& _shapeA, const std::vector<Util::Vector>& _shapeB)
 {
 	//***** decomposition part below, written by bingchen, called when shape A or B is not a convex ****
+	/*
+	if (!isConvex(_shapeA)) {
+		std::cerr << "A is not convex" << std::endl;
+	}
+	if (!isConvex(_shapeB)) {
+		std::cerr << "B is not convex" << std::endl;
+	}
+	*/
 	if (!isConvex(_shapeA) || !isConvex(_shapeB)) {
 		//std::cerr << "shape A or B is not a convex!!" << std::endl;
 		std::vector<std::vector<Util::Vector>> decomp_A = decompositeShape(_shapeA);
