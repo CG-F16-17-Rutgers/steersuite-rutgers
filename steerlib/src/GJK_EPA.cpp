@@ -1,7 +1,7 @@
-/*
- @Bingchen Liu
- @Joshua
- @Micheal
+ï»¿/*
+@Bingchen Liu
+@Joshua
+@Micheal
 */
 
 #include "obstacles/GJK_EPA.h"
@@ -44,7 +44,7 @@ bool isConvex(const std::vector<Util::Vector>& _shape) {
 
 	for (int current = 0; current < _shape.size(); current++) {
 		int next = (current + 1 == _shape.size()) ? 0 : (current + 1);
-		int last = (current == 0) ? (_shape.size() -1) : (current - 1);
+		int last = (current == 0) ? (_shape.size() - 1) : (current - 1);
 
 		Util::Vector edge1 = _shape[next] - _shape[current];
 		Util::Vector edge2 = _shape[current] - _shape[last];
@@ -56,6 +56,39 @@ bool isConvex(const std::vector<Util::Vector>& _shape) {
 	return true;
 }
 
+bool detectConvex(const std::vector<Util::Vector>& _shape) {
+	if (_shape.size() <= 2) {
+		std::cerr << "not enough vertices in shape!!!" << std::endl;
+		return false;
+	}
+
+	for (int i = 0; i < _shape.size(); ++i) {
+		int next = i + 1;
+		if (next == _shape.size()) {
+			next = 0;
+		}
+		Util::Vector v1 = _shape[i];
+		Util::Vector v2 = _shape[next];
+		Util::Vector edge12 = v2 - v1;
+		std::vector<Util::Vector> x_multiply_list;
+		for (int j = 0; j < _shape.size(); ++j) {
+			if (j == i || j == next) continue;
+			Util::Vector v3 = _shape[j];
+			Util::Vector edge13 = v3 - v1;
+			Util::Vector x_multiply = Util::cross(edge12, edge13);
+			x_multiply_list.push_back(x_multiply);
+		}
+
+		for (int j = 1; j < x_multiply_list.size(); ++j) {
+			if (x_multiply_list[0] * x_multiply_list[j] < 0) {
+				//			std::cout << "It's not a convex!!!" << std::endl;
+				return false;
+			}
+		}
+		x_multiply_list.clear();
+	}
+	return true;
+}
 // find the point in each shape follow a given direction, the return point used when calculate Minkowski Difference
 Util::Vector getFarthestPointInDirection(const std::vector<Util::Vector>& _shape, Util::Vector direction)
 {
@@ -99,9 +132,9 @@ Util::Vector getDirection(const std::vector<Util::Vector>& simplexList)
 	Util::Vector AB = lastSimplex - secondLastSimplex;
 	Util::Vector AO = lastSimplex * (-1);
 	Util::Vector direction = AO*(AB*AB) - AB*(AB*AO); // (AB X AO) X AB, 
-	//Note that the following triple product expansion is used:
-	//(A x B) x C = B(C.dot(A)) ¨C A(C.dot(B)) to evaluate the triple product.;
-	//this can get the direction vector that perpendicular to AB and points to origin
+													  //Note that the following triple product expansion is used:
+													  //(A x B) x C = B(C.dot(A)) ï¿½C A(C.dot(B)) to evaluate the triple product.;
+													  //this can get the direction vector that perpendicular to AB and points to origin
 	return direction;
 }
 
@@ -112,12 +145,12 @@ bool onSegment(Util::Vector A, Util::Vector B, Util::Vector Origin)
 		return true;
 	}
 	if (A.x == 0 && B.x == 0) {
-		if ( (A.z * B.z) < 0) {
+		if ((A.z * B.z) < 0) {
 			return true;
 		}
 	}
 	else if (A.z == 0 && B.z == 0) {
-		if ( (A.x * B.x) < 0) {
+		if ((A.x * B.x) < 0) {
 			return true;
 		}
 	}
@@ -299,16 +332,17 @@ std::vector<int>  getConcavePoints(const std::vector<Util::Vector>& _shape, bool
 	return concavePoints;
 }
 
-//***** this is specifically for polygons2 test below *****
+
+//***** this is specifically for polygons2 test below , it is wrong so not used *****
 bool isInOneLine(const Util::Vector& point1, const Util::Vector& point2, const Util::Vector& point3) {
-	
+
 	float x1 = point1.x - point2.x;
 	float z1 = point1.z - point2.z;
 
 	float x2 = point1.x - point3.x;
 	float z2 = point1.z - point3.z;
 
-	if ( (x1 * z2) == (x2 * z1)) {
+	if ((x1 * z2) == (x2 * z1)) {
 		/*
 		std::cerr << "point1: " << " x: " << point1.x << " y: " << point1.y << " z: " << point1.z << std::endl;
 		std::cerr << "point2: " << " x: " << point2.x << " y: " << point2.y << " z: " << point2.z << std::endl;
@@ -316,11 +350,11 @@ bool isInOneLine(const Util::Vector& point1, const Util::Vector& point2, const U
 		*/
 		return true;
 	}
-	
+
 	return false;
 }
 
-bool getIntersectPoint(const Util::Vector& point1, const Util::Vector& point2, const Util::Vector& point3, const Util::Vector& point4, Util::Vector& intersectPoint ) {
+bool getIntersectPoint(const Util::Vector& point1, const Util::Vector& point2, const Util::Vector& point3, const Util::Vector& point4, Util::Vector& intersectPoint) {
 	// y1 = k1 * x + b1  point1, point2     k1 = (point1.z - point2.z) / ( point1.x - point2.x ) 
 	// y2 = k2 * x + b2
 	float k1 = (point1.z - point2.z) / (point1.x - point2.x);
@@ -338,21 +372,21 @@ bool getIntersectPoint(const Util::Vector& point1, const Util::Vector& point2, c
 	}
 	/*
 	if (point1.x == point2.x) {
-		if (point3.x != point4.x ) {
-			intersectX = point1.x;
-			intersectZ = k2 * intersectX + b2;
-		}
+	if (point3.x != point4.x ) {
+	intersectX = point1.x;
+	intersectZ = k2 * intersectX + b2;
+	}
 	}
 	else if (point3.x == point4.x) {
-		if (point1.x != point2.x) {
-			intersectX = point3.x;
-			intersectZ = k1 * intersectX + b1;
-		}
+	if (point1.x != point2.x) {
+	intersectX = point3.x;
+	intersectZ = k1 * intersectX + b1;
+	}
 	}*/
-	
+
 	//std::cerr <<"intersect x: " << intersectX << " intersect z: " << intersectZ << std::endl;
 
-	Util::Vector newPoint {intersectX, 0, intersectZ};
+	Util::Vector newPoint{ intersectX, 0, intersectZ };
 
 	if (intersectX <= std::max(point1.x, point2.x) && intersectX >= std::min(point1.x, point2.x)) {
 		intersectPoint = newPoint;
@@ -368,31 +402,9 @@ bool getIntersectPoint(const Util::Vector& point1, const Util::Vector& point2, c
 std::vector< std::vector<Util::Vector> > decompositeShape(const std::vector<Util::Vector>& _shape) {
 	std::vector< std::vector<Util::Vector>> decompositedShapeList;
 	std::vector< Util::Vector> tmpShape = _shape;
-	
-	while (!isConvex(tmpShape)) {
 
-		
-		//***** this is specifically for polygons2 test below *****
-		//std::cerr << "begin check" << std::endl;
+	while (!detectConvex(tmpShape)) {
 
-		if (isInOneLine(_shape[1], _shape[3], _shape[2])) {
-			Util::Vector intersectPoint;
-			//std::cerr << "1,2,3 are on same line" << std::endl;
-
-			if (getIntersectPoint(_shape[1], _shape[3], _shape[0], _shape[4], intersectPoint)) {
-
-				decompositedShapeList = { { _shape[0], _shape[1], intersectPoint } ,{ intersectPoint, _shape[3], _shape[4] } };
-				//std::cerr << "finished" << std::endl;
-
-				return decompositedShapeList;
-			}
-		}
-		else {
-			//std::cerr << "1,2,3 are not on same line" << std::endl;
-
-		}
-		//***** this is specifically for polygons2 test above *****
-		
 		std::vector<int> concavePointIndexs = getConcavePoints(tmpShape, detectClockwise(tmpShape));
 		std::vector<int> removedPoints;
 
@@ -401,9 +413,9 @@ std::vector< std::vector<Util::Vector> > decompositeShape(const std::vector<Util
 			int last_1 = (concavePointIndexs[i] == 0) ? tmpShape.size() - 1 : concavePointIndexs[i] - 1;
 			int last_2 = (last_1 == 0) ? tmpShape.size() - 1 : last_1 - 1;
 			std::vector< Util::Vector> tmp_triangle{ tmpShape[last_2], tmpShape[last_1], tmpShape[concavePointIndexs[i]] };
-			
+
 			decompositedShapeList.push_back(tmp_triangle);
-			
+
 			removedPoints.push_back(last_1);
 		}
 
@@ -416,7 +428,7 @@ std::vector< std::vector<Util::Vector> > decompositeShape(const std::vector<Util
 			}
 		}
 		tmpShape = newTmpShape;
-		
+
 		if (tmpShape.size() <= 3) {
 			break;
 
@@ -435,13 +447,13 @@ bool SteerLib::GJK_EPA::intersect(float& return_penetration_depth, Util::Vector&
 	//***** decomposition part below, written by bingchen, called when shape A or B is not a convex ****
 	/*
 	if (!isConvex(_shapeA)) {
-		std::cerr << "A is not convex" << std::endl;
+	std::cerr << "A is not convex" << std::endl;
 	}
 	if (!isConvex(_shapeB)) {
-		std::cerr << "B is not convex" << std::endl;
+	std::cerr << "B is not convex" << std::endl;
 	}
 	*/
-	if (!isConvex(_shapeA) || !isConvex(_shapeB)) {
+	if (!detectConvex(_shapeA) || !detectConvex(_shapeB)) {
 		//std::cerr << "shape A or B is not a convex!!" << std::endl;
 		std::vector<std::vector<Util::Vector>> decomp_A = decompositeShape(_shapeA);
 		std::vector<std::vector<Util::Vector>> decomp_B = decompositeShape(_shapeB);
@@ -478,7 +490,7 @@ bool SteerLib::GJK_EPA::intersect(float& return_penetration_depth, Util::Vector&
 	simplexList.push_back(simplex);        // get the first two simplex. build a line
 
 	int index = 0;
-	while (true) 
+	while (true)
 	{
 		index++;
 		direction = getDirection(simplexList);
