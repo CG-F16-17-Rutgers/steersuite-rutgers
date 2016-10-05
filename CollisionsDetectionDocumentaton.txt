@@ -51,7 +51,7 @@ Preprocessing...
 
 
 PART C
-[this needs to be replaced with an explanation of the differences. Will do tomorrow morning]
+Polygons2.xml crashes because the one polygon intersects with itself. Once polygons2.xml was changed so there was no polygon intersecting with itself then polygons2.xml no longer crashed.
 
 The fixed version is called polygons_2.xml
 
