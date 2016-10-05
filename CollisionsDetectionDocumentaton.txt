@@ -78,9 +78,32 @@ Removing module: collisionAI
 
 PART D
 
-[this needs a description of the implementation and also what happened before the code was changed)
+With the standard GJK algorithm it detects a collision despite the two polygons clearly not colliding anywhere. 
 
-It runs successfully and detects no collisions as can be seen in the following terminal output
+This can be seen from its terminal output which is below
+
+$ ./steersim -testcase ../../testcases/polygons3.xml -ai collisionAI
+
+Creating spatialdatabase: gridDatabase
+Creating planning domain: gridDomain
+Created a grid database planning domain *************
+checking: ./collisionAI.dll for module
+loaded module collisionAI
+loaded module testCasePlayer
+Initializing...
+Preprocessing...
+ Collision detected between polygon No.0 and No.1 with a penetration depth of 7.48022e+28 and penetration vector of (0,0,0)
+Simulation is running...
+Postprocessing...
+Simulated 232 frames.
+Cleaning up...
+Done.
+Removing module: testCasePlayer
+Removing module: collisionAI
+
+[description of how polygon decomposition was done]
+
+After changing the GJK algorithm to work with convex polygon decomposition it runs properly and detects no collisions as can be seen in the following terminal output
 
 $ ./steersim -testcase ../../testcases/polygons3.xml -ai collisionAI
 
