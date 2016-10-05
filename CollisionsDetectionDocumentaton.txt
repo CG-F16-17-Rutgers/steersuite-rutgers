@@ -53,7 +53,7 @@ Preprocessing...
 PART C
 Polygons2.xml crashes because the one polygon intersects with itself. Once polygons2.xml was changed so there was no polygon intersecting with itself then polygons2.xml no longer crashed.
 
-The fixed version is called polygons_2.xml
+The fixed version is called polygons_2.xml and had the polygons position changed so they are colliding and one is still concave in order to show our code works.
 
 Its' terminal output is
 
@@ -67,7 +67,7 @@ loaded module collisionAI
 loaded module testCasePlayer
 Initializing...
 Preprocessing...
- Collision detected between polygon No.0 and No.1 with a penetration depth of 1 and penetration vector of (-0.8,0,0.6)
+Collision detected between polygon No.0 and No.1 with a penetration depth of 1 and penetration vector of (-0.8,0,0.6)
 Simulation is running...
 Postprocessing...
 Simulated 225 frames.
@@ -92,7 +92,7 @@ loaded module collisionAI
 loaded module testCasePlayer
 Initializing...
 Preprocessing...
- Collision detected between polygon No.0 and No.1 with a penetration depth of 7.48022e+28 and penetration vector of (0,0,0)
+Collision detected between polygon No.0 and No.1 with a penetration depth of 7.48022e+28 and penetration vector of (0,0,0)
 Simulation is running...
 Postprocessing...
 Simulated 232 frames.
@@ -101,7 +101,7 @@ Done.
 Removing module: testCasePlayer
 Removing module: collisionAI
 
-[description of how polygon decomposition was done]
+Polygon decomposition was done by going through each point
 
 After changing the GJK algorithm to work with convex polygon decomposition it runs properly and detects no collisions as can be seen in the following terminal output
 
