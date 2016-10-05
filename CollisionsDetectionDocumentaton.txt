@@ -101,7 +101,11 @@ Done.
 Removing module: testCasePlayer
 Removing module: collisionAI
 
-Polygon decomposition was done by going through each point
+Polygon decomposition was done by the following steps
+1. Go through each point and get the angle of the point
+2. If the angle is larger than pi it means that point is a concave part of the polygon
+3. For each such point, we will get the two previous points and we construct a triangle with those three points and that triangle is a convex polygon.
+4. Those 3 steps are repeated until every point has been checked and used in a triangle if necessary. 
 
 After changing the GJK algorithm to work with convex polygon decomposition it runs properly and detects no collisions as can be seen in the following terminal output
 
