@@ -19,10 +19,10 @@
 
 
 /**
- * @brief Social Forces Agent stuff
- *
- *
- */
+* @brief Social Forces Agent stuff
+*
+*
+*/
 
 // #define DRAW_ANNOTATIONS 1
 // #define DRAW_HISTORIES 1
@@ -42,10 +42,10 @@ public:
 	bool enabled() const { return _enabled; }
 	Util::Point position() const { return _position; }
 	Util::Vector forward() const { return _forward; }
-	Util::Vector velocity() const {return _velocity; }
+	Util::Vector velocity() const { return _velocity; }
 	float radius() const { return _radius; }
 	const SteerLib::AgentGoalInfo & currentGoal() const { return _goalQueue.front(); }
-	size_t id() const { return id_;}
+	size_t id() const { return id_; }
 	const std::queue<SteerLib::AgentGoalInfo> & agentGoals() const { return _goalQueue; }
 	void addGoal(const SteerLib::AgentGoalInfo & newGoal) { throw Util::GenericException("addGoals() not implemented yet for SocialForcesAgent"); }
 	void clearGoals() { throw Util::GenericException("clearGoals() not implemented yet for SocialForcesAgent"); }
@@ -55,13 +55,17 @@ public:
 	/// The Util namespace helper functions do the job nicely for basic circular agents.
 	//@{
 	bool intersects(const Util::Ray &r, float &t) { return Util::rayIntersectsCircle2D(_position, _radius, r, t); }
-	bool overlaps(const Util::Point & p, float radius) { return Util::circleOverlapsCircle2D( _position, _radius, p, radius); }
-	float computePenetration(const Util::Point & p, float radius) { return Util::computeCircleCirclePenetration2D( _position, _radius, p, radius); }
+	bool overlaps(const Util::Point & p, float radius) { return Util::circleOverlapsCircle2D(_position, _radius, p, radius); }
+	float computePenetration(const Util::Point & p, float radius) { return Util::computeCircleCirclePenetration2D(_position, _radius, p, radius); }
 	//@}
 
 	// bool collidesAtTimeWith(const Util::Point & p1, const Util::Vector & rightSide, float otherAgentRadius, float timeStamp, float footX, float footZ);
 	// void insertAgentNeighbor(const SteerLib::AgentInterface * agent, float &rangeSq) {throw Util::GenericException("clearGoals() not implemented yet for SocialForcesAgent");}
 	// bool compareDist(SteerLib::AgentInterface * a1, SteerLib::AgentInterface * a2 );
+
+	// added by bingchen
+	Util::Color getColor() { return _color; }
+	Util::Vector last_direction;
 
 protected:
 	/// Updates position, velocity, and orientation of the agent, given the force and dt time step.
@@ -73,8 +77,8 @@ protected:
 
 
 	/**
-		 * \brief   Updates the three-dimensional position and three-dimensional velocity of this agent.
-		 */
+	* \brief   Updates the three-dimensional position and three-dimensional velocity of this agent.
+	*/
 	void update(float timeStamp, float dt, unsigned int frameNumber);
 
 
@@ -95,7 +99,8 @@ private:
 	// bool reachedCurrentWaypoint();
 	// void updateMidTermPath();
 	// bool hasLineOfSightTo(Util::Point point);
-
+	Vector calcPursueAndEvadeForce(Vector _goalDirection, float _dt);
+	Vector calcSeekAndFleeForce(Vector _goalDirection, float _dt);
 
 	void calcNextStep(float dt);
 	Util::Vector calcRepulsionForce(float dt);
