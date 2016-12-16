@@ -86,7 +86,12 @@ namespace SocialForcesGlobals {
 	extern float sf_wall_a;
 	extern float sf_max_speed;
 
-
+	extern float c_replusion;
+	extern float c_prox;
+	extern float c_queue;
+	extern float c_order_frame;
+	extern float c_cp_radius;
+	extern float c_prefer_speed;
 
 	extern PhaseProfilers * gPhaseProfilers;
 }
@@ -108,6 +113,13 @@ public:
 	float sf_wall_b;
 	float sf_wall_a;
 	float sf_max_speed;
+
+	float c_replusion;
+	float c_prox;
+	float c_queue;
+	float c_order_frame;
+	float c_cp_radius;
+	float c_prefer_speed;
 
 	void setParameters(SteerLib::Behaviour behavior)
 	{
@@ -168,6 +180,26 @@ public:
 			{
 				value >> sf_max_speed;
 			}
+
+			else if (p_key == "c_replusion") {
+				value >> c_replusion;
+			}
+			else if (p_key == "c_prox") {
+				value >> c_prox;
+			}
+			else if (p_key == "c_queue") {
+				value >> c_queue;
+			}
+			else if (p_key == "c_order_frame") {
+				value >> c_order_frame;
+			}
+			else if (p_key == "c_cp_radius") {
+				value >> c_cp_radius;
+			}
+			else if (p_key == "c_prefer_speed") {
+				value >> c_prefer_speed;
+			}
+
 		}
 		
 	}

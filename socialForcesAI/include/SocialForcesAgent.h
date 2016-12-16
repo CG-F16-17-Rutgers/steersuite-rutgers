@@ -66,7 +66,32 @@ public:
 	// added by bingchen
 	Util::Color getColor() { return _color; }
 	Util::Vector last_direction;
+	Util::Point final_location;
+	bool targetChanged = false;
 
+	Util::Vector total_force;
+
+	bool plane_ingress_arrived_door = false;
+	bool plane_ingress_arrived_corridor = false;
+	bool plane_ingress_arrived_seat_row = false;
+	bool plane_ingress_arrived_target = false;
+
+	bool started = false;
+
+
+	bool point_one_arrived = false;
+
+	bool point_two_arrived = false;
+
+	bool point_three_arrived = false;
+
+	bool point_four_arrived = false;
+
+	Util::Point init_position = { 0.0f, 0.0f, 0.0f };
+	Util::Point last_position = { 0.0f, 0.0f, 0.0f };
+	int deadlock_trigged = 0;
+
+	
 protected:
 	/// Updates position, velocity, and orientation of the agent, given the force and dt time step.
 	// void _doEulerStep(const Util::Vector & steeringDecisionForce, float dt);
@@ -101,6 +126,11 @@ private:
 	// bool hasLineOfSightTo(Util::Point point);
 	Vector calcPursueAndEvadeForce(Vector _goalDirection, float _dt);
 	Vector calcSeekAndFleeForce(Vector _goalDirection, float _dt);
+	Vector calcUnalignedCollisionAvoidance();
+	Vector Queue();
+	std::vector<SteerLib::AgentInterface *> getNeighborAgents(float search_radius);
+	Vector SocialForcesAgent::calcSeparationForce(float separation_radius, float separation_space);
+	bool hasFrontAgent();
 
 	void calcNextStep(float dt);
 	Util::Vector calcRepulsionForce(float dt);
@@ -113,6 +143,10 @@ private:
 	std::pair<Util::Point, Util::Point> calcWallPointsFromNormal(SteerLib::ObstacleInterface* obs, Util::Vector normal);
 	Util::Vector calcObsNormal(SteerLib::ObstacleInterface* obs);
 
+	Util::Vector calcDeadlockForce();
+
+	Util::Point _position_last_frame;
+	bool  SocialForcesAgent::isEllipticalCollisionDetected(SteerLib::ObstacleInterface * wall);
 	// For midterm planning stores the plan to the current goal
 	// holds the location of the best local target along the midtermpath
 
