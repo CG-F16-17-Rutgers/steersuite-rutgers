@@ -29,6 +29,7 @@ using namespace SteerLib;
 
 SocialForcesAgent::SocialForcesAgent()
 {
+	
 	_SocialForcesParams.sf_acceleration = sf_acceleration;
 	_SocialForcesParams.sf_personal_space_threshold = sf_personal_space_threshold;
 	_SocialForcesParams.sf_agent_repulsion_importance = sf_agent_repulsion_importance;
@@ -41,7 +42,39 @@ SocialForcesAgent::SocialForcesAgent()
 	_SocialForcesParams.sf_wall_b = sf_wall_b;
 	_SocialForcesParams.sf_wall_a = sf_wall_a;
 	_SocialForcesParams.sf_max_speed = sf_max_speed;
+	
+	// same as above, added by bingchen
+	_SocialForcesParams.c_replusion = c_replusion;
+	_SocialForcesParams.c_prox = c_prox;
+	_SocialForcesParams.c_queue = c_queue;
+	_SocialForcesParams.c_order_frame = c_order_frame;
+	_SocialForcesParams.c_cp_radius = c_cp_radius;
+	_SocialForcesParams.c_prefer_speed = c_prefer_speed;
+	
+	//std::cerr << "get values sf_body_force" << sf_body_force << std::endl;
+	
+	/*
+	_SocialForcesParams.sf_acceleration = 0.05;
+	_SocialForcesParams.sf_personal_space_threshold = 0.7497;
+	_SocialForcesParams.sf_agent_repulsion_importance = 0.05;
+	_SocialForcesParams.sf_query_radius = 1;
+	_SocialForcesParams.sf_body_force = 925.31;
+	_SocialForcesParams.sf_agent_body_force = 1826.873;
+	_SocialForcesParams.sf_sliding_friction_force = 1000;
+	_SocialForcesParams.sf_agent_b = 3.060428;
+	_SocialForcesParams.sf_agent_a = 8.02718;
+	_SocialForcesParams.sf_wall_b = 0.96487;
+	_SocialForcesParams.sf_wall_a = 66.497;
+	_SocialForcesParams.sf_max_speed = 3.0442;
 
+
+	_SocialForcesParams.c_replusion = 2;
+	_SocialForcesParams.c_prox = 0.1743;
+	_SocialForcesParams.c_queue = 0.2;
+	_SocialForcesParams.c_order_frame = 14.4810;
+	_SocialForcesParams.c_cp_radius = 0.1;
+	_SocialForcesParams.c_prefer_speed = 2.0;
+		*/
 	_enabled = false;
 }
 
@@ -216,6 +249,8 @@ void SocialForcesAgent::reset(const SteerLib::AgentInitialConditions & initialCo
 	assert(_forward.length() != 0.0f);
 	assert(_goalQueue.size() != 0);
 	assert(_radius != 0.0f);
+
+	final_location = _goalQueue.front().targetLocation;
 }
 
 
@@ -497,6 +532,28 @@ Util::Vector SocialForcesAgent::calcAgentRepulsionForce(float dt)
 	return agent_repulsion_force;
 }
 
+
+// written by Bingchen
+bool  SocialForcesAgent::isEllipticalCollisionDetected(SteerLib::ObstacleInterface * wall) {
+
+
+	Util::AxisAlignedBox box = wall->getBounds();
+
+	Util::Point mid_point_min = ((box.xmax - box.xmin) > (box.zmax - box.zmin)) ? Util::Point(box.xmin, 0, (box.zmin + box.zmax) / 2)
+		: Util::Point((box.xmin + box.xmax) / 2, 0, box.zmin);
+
+	Util::Point mid_point_max = ((box.xmax - box.xmin) > (box.zmax - box.zmin)) ? Util::Point(box.xmax, 0, (box.zmin + box.zmax) / 2)
+		: Util::Point((box.xmin + box.xmax) / 2, 0, box.zmax);
+
+	float standard_distance = ((box.xmax - box.xmin) > (box.zmax - box.zmin)) ? distanceBetween(mid_point_max, Util::Point(box.xmin, 0, box.zmin)) + (box.zmin + box.zmax) / 2
+		: distanceBetween(mid_point_max, Util::Point(box.xmin, 0, box.zmin)) + (box.xmin + box.xmax) / 2;
+
+	float self_distance = distanceBetween(mid_point_min, _position) + distanceBetween(mid_point_max, _position);
+
+	return (self_distance < standard_distance);
+
+}
+
 Util::Vector SocialForcesAgent::calcWallRepulsionForce(float dt)
 {
 
@@ -519,14 +576,20 @@ Util::Vector SocialForcesAgent::calcWallRepulsionForce(float dt)
 		if (!(*neighbour)->isAgent())
 		{
 			tmp_ob = dynamic_cast<SteerLib::ObstacleInterface *>(*neighbour);
-			
+
 			// added by Bingchen
-			runLongTermPlanning(_goalQueue.front().targetLocation, false);
+			//runLongTermPlanning(_goalQueue.front().targetLocation, false);
 		}
 		else
 		{
 			continue;
 		}
+
+		/*
+		if (isEllipticalCollisionDetected(tmp_ob)) {
+		std::cerr << "collision detected" << std::endl;
+		}
+		*/
 		if (tmp_ob->computePenetration(this->position(), this->radius()) > 0.000001)
 		{
 			CircleObstacle * cir_obs = dynamic_cast<SteerLib::CircleObstacle *>(tmp_ob);
@@ -613,6 +676,7 @@ Util::Vector SocialForcesAgent::calcWallRepulsionForce(float dt)
 		}
 
 	}
+
 	return wall_repulsion_force;
 }
 
@@ -756,6 +820,60 @@ Util::Vector SocialForcesAgent::calcObsNormal(SteerLib::ObstacleInterface* obs)
 	return normalize(position() - obs_centre);
 }
 
+bool hasSameSign(float a, float b) {
+	return ((a > 0.0f && b > 0.0f) || (a <= 0.0f && b <= 0.0f));
+}
+
+bool isColorEqual(Util::Color c1, Util::Color c2) {
+	return c1.r == c2.r && c1.g == c2.g && c1.b == c2.b;
+}
+
+Util::Vector SocialForcesAgent::calcDeadlockForce()
+{
+	Util::Vector lock_force = { 0,0,0 };
+
+	/*
+	float search_radius = 5;
+	std::vector<SteerLib::AgentInterface *> neighbor_agents = getNeighborAgents(search_radius);
+	//std::cerr << neighbor_agents.size() << std::endl;
+
+
+	float ahead_time = 2.0f;
+	int i = 0;
+	float distance = 3;
+	SteerLib::AgentInterface *tmp_agent;
+
+	for (std::vector<SteerLib::AgentInterface *>::iterator tmp_ag = neighbor_agents.begin(); tmp_ag != neighbor_agents.end(); tmp_ag++) {
+	//only calculate agents that come from another direction
+	//Util::Point future_position = _position.operator+(_velocity.operator*(ahead_time));
+	//Util::Point tmp_ag_pos = (*tmp_ag)->position().operator+((*tmp_ag)->velocity().operator*(ahead_time));
+	if (distanceBetween((*tmp_ag)->position(), _position) < distance) {
+	//if (hasSameSign((*tmp_ag)->velocity().x, _velocity.x)) {
+	//if( !isColorEqual( (*tmp_ag)->getColor() , _color ) ){
+	//std::cerr << (*tmp_ag)->velocity() << std::endl;
+	tmp_agent = (*tmp_ag);
+	//if ((*tmp_ag)->getColor().b == 1) {
+	lock_force += -total_force;
+	//_velocity.operator*=(0);
+	i++;
+	//}
+	//}
+	//}
+	}
+	if (i != 0) {
+	int randNum = rand() % (5) + 1;
+	//lock_force = normalize(lock_force) * (float)randNum;
+	lock_force = (lock_force) * (float)randNum;
+	}
+	*/
+
+	if (_position_last_frame.operator==(_position)) {
+		std::cerr << "dead lock detected" << std::endl;
+
+	}
+	return lock_force;
+}
+
 /*
 void SocialForcesAgent::computeNeighbors()
 {
@@ -770,7 +888,7 @@ dynamic_cast<SocialForcesAIModule *>(rvoModule)->kdTree_->computeAgentNeighbors(
 
 // added by Bingchen, used to implement pursue and evade
 Vector SocialForcesAgent::calcPursueAndEvadeForce(Vector _goalDirection, float _dt)
-{	
+{
 	if (_color.r == 1.0f) {
 		Util::Vector goal_force = (((_goalDirection * PERFERED_SPEED) - velocity()) / (_SocialForcesParams.sf_acceleration / _dt));
 		return goal_force;
@@ -808,12 +926,12 @@ Vector SocialForcesAgent::calcPursueAndEvadeForce(Vector _goalDirection, float _
 
 	for (std::vector<SteerLib::AgentInterface *>::iterator tmp_ag = neighbor_agents.begin(); tmp_ag != neighbor_agents.end(); tmp_ag++) {
 		//neighbor_avg += normalize((*tmp_ag)->currentGoal().targetLocation - (*tmp_ag)->position());
-		
+
 		//if the neighbot agent's color is red and the self agent's color is blue
 		//it means the blue has to pursue the red
-		if ( (*tmp_ag)->getColor().r == Util::gRed.r && _color.g == Util::gGreen.g ) {
-			
-			neighbor_avg -= normalize( (*tmp_ag)->position() - position() );
+		if ((*tmp_ag)->getColor().r == Util::gRed.r && _color.g == Util::gGreen.g) {
+
+			neighbor_avg -= normalize((*tmp_ag)->position() - position());
 			Util::Vector _direction = normalize(pi*neighbor_avg);
 
 			Util::Vector goal_force = _dt * AGENT_MASS * (_direction * PREFERED_SPEED * 2.0f - velocity()) / _dt;
@@ -834,11 +952,15 @@ Vector SocialForcesAgent::calcPursueAndEvadeForce(Vector _goalDirection, float _
 			return goal_force;
 		}
 	}
-	return {0.0f, 0.0f, 0.0f};
+	return{ 0.0f, 0.0f, 0.0f };
 }
 
+
+
+
 // for the seek and flee written by Bingchen
-Vector SocialForcesAgent::calcSeekAndFleeForce(Vector _goalDirection, float _dt) {
+Vector SocialForcesAgent::calcSeekAndFleeForce(Vector _goalDirection, float _dt)
+{
 
 	if (_color.b == 1.0f) {
 		Util::Vector goal_force = (((_goalDirection * PERFERED_SPEED) - velocity()) / (_SocialForcesParams.sf_acceleration / _dt));
@@ -885,64 +1007,320 @@ Vector SocialForcesAgent::calcSeekAndFleeForce(Vector _goalDirection, float _dt)
 	}
 
 	float pi = 0.3f;
-	if ( _color.r == 1.0f) {
-		if ( blue_number != 0 ) {
+	if (_color.r == 1.0f) {
+		if (blue_number != 0) {
 			Util::Vector _direction = normalize(neighbor_total);
-			Util::Vector goal_force =  _dt * AGENT_MASS * (_direction * PREFERED_SPEED * 1.5f - velocity()) / _dt;
+			Util::Vector goal_force = _dt * AGENT_MASS * (_direction * PREFERED_SPEED * 1.5f - velocity()) / _dt;
 			last_direction = goal_force;
 			return goal_force;
-		}	
+		}
 		//return last_direction;
 	}
-	return { 0.0f, 0.0f, 0.0f };
+	return{ 0.0f, 0.0f, 0.0f };
+}
+
+// repath when detect potential colision written by Bingchen
+Util::Vector SocialForcesAgent::calcUnalignedCollisionAvoidance() {
+
+	float search_radius = 20;
+	std::vector<SteerLib::AgentInterface *> neighbor_agents = getNeighborAgents(search_radius);
+	//std::cerr << neighbor_agents.size() << std::endl;
+
+	float ahead_time = 5.0f;
+	for (std::vector<SteerLib::AgentInterface *>::iterator tmp_ag = neighbor_agents.begin(); tmp_ag != neighbor_agents.end(); tmp_ag++) {
+		//only calculate agents that come from another direction
+		if (distanceBetween((*tmp_ag)->position(), _position) > 5) {
+
+			Util::Point future_position = { (*tmp_ag)->velocity().x * ahead_time + (*tmp_ag)->position().x,
+				0,
+				(*tmp_ag)->velocity().z * ahead_time + (*tmp_ag)->position().z };
+
+			if (distanceBetween(future_position, _position) < 2) {
+
+				Util::Vector current_direction = normalize(_currentLocalTarget - _position);
+				Util::Vector new_direction = { -current_direction.z, 0, current_direction.x };
+
+				return new_direction;
+
+			}
+
+		}
+	}
+	return{ 0.0f, 0.0f, 0.0f };
+}
+
+// return neighbor agents, by Bingchen
+std::vector<SteerLib::AgentInterface*> SocialForcesAgent::getNeighborAgents(float search_radius)
+{
+	std::set<SteerLib::SpatialDatabaseItemPtr> _neighbors;
+
+	getSimulationEngine()->getSpatialDatabase()->getItemsInRange(_neighbors,
+		_position.x - (this->_radius + search_radius),
+		_position.x + (this->_radius + search_radius),
+		_position.z - (this->_radius + search_radius),
+		_position.z + (this->_radius + search_radius),
+		dynamic_cast<SteerLib::SpatialDatabaseItemPtr>(this));
+
+	SteerLib::AgentInterface *tmp_agent;
+	Util::Vector neighbor_avg(0, 0, 0);
+	std::vector<SteerLib::AgentInterface *> neighbor_agents;
+
+	for (std::set<SteerLib::SpatialDatabaseItemPtr>::iterator neighbour = _neighbors.begin(); neighbour != _neighbors.end(); neighbour++) {
+		if ((*neighbour)->isAgent()) {
+			tmp_agent = dynamic_cast<SteerLib::AgentInterface *>(*neighbour);
+		}
+		else {
+			continue;
+		}
+		if (id() != tmp_agent->id()) {
+			neighbor_agents.push_back(tmp_agent);
+		}
+	}
+
+
+	return neighbor_agents;
+}
+
+
+bool SocialForcesAgent::hasFrontAgent() {
+	return true;
+}
+
+Util::Vector SocialForcesAgent::calcSeparationForce(float separation_radius, float separation_space) {
+	std::vector<SteerLib::AgentInterface*> neighbor_agents = getNeighborAgents(separation_radius);
+
+	Vector separate_force = { 0,0,0 };
+	//std::cerr << _radius << std::endl;
+
+	for (std::vector<SteerLib::AgentInterface *>::iterator tmp_ag = neighbor_agents.begin(); tmp_ag != neighbor_agents.end(); tmp_ag++) {
+
+		separate_force.x += (*tmp_ag)->position().x - _position.x;
+		separate_force.z += (*tmp_ag)->position().z - _position.z;
+
+	}
+	if (neighbor_agents.size() != 0) {
+		separate_force.operator/=(-neighbor_agents.size());
+		separate_force = normalize(separate_force);
+		separate_force.operator*=(-1.0f);
+	}
+
+	separate_force.operator*=(separation_space);
+
+	return separate_force;
+}
+
+
+Util::Vector SocialForcesAgent::Queue() {
+
+	float search_radius = 2.0f;
+	std::vector<SteerLib::AgentInterface*> neighbor_agents = getNeighborAgents(search_radius);
+
+	float distance = 2;
+	SteerLib::AgentInterface * tmp_agent;
+	// get the first Agent ahead
+	Vector queue_force = { 0,0,0 };
+
+	Vector brake_force = { 0,0,0 };
+	Vector separate_force = { 0,0,0 };
+
+	float i = 0;
+	float ahead_number = 0;
+	//std::cerr << _radius << std::endl;
+
+	if (neighbor_agents.size() != 0) {
+		Util::Vector direction = normalize(_velocity);
+
+		for (std::vector<SteerLib::AgentInterface *>::iterator tmp_ag = neighbor_agents.begin(); tmp_ag != neighbor_agents.end(); tmp_ag++) {
+			Util::Point front_point = _position + 1.0f * direction;
+
+			if (distanceBetween(front_point, (*tmp_ag)->position()) < 1.0f) {
+				ahead_number += 1;
+			}
+
+			if (distanceBetween(_position, (*tmp_ag)->position()) <= 1.1f) {
+				separate_force.x += (*tmp_ag)->position().x - _position.x;
+				separate_force.z += (*tmp_ag)->position().z - _position.z;
+				i += 1;
+			}
+		}
+
+		if (ahead_number > 0) {
+			brake_force.operator-=(total_force * 0.8f);
+			brake_force.operator-=(_velocity);
+		}
+		if (i > 0) {
+			separate_force.operator/=(i);
+			separate_force.operator*=(-1.0f);
+			separate_force = normalize(separate_force);
+			separate_force.operator*=(1.1f);
+		}
+		brake_force.operator+=(separate_force);
+	}
+
+	return brake_force;
+}
+
+
+
+float abs_p(float x) {
+	float a = x > 0 ? x : -x;
+
+	int b = (a * 100) / 100;
+
+	return float(int(b/2));
+}
+
+float power3(float a) {
+	return a*a*a;
 }
 
 void SocialForcesAgent::updateAI(float timeStamp, float dt, unsigned int frameNumber)
 {
-	// std::cout << "_SocialForcesParams.rvo_max_speed " << _SocialForcesParams._SocialForcesParams.rvo_max_speed << std::endl;
+	//std::cout << "_SocialForcesParams.rvo_max_speed " << _SocialForcesParams._SocialForcesParams.rvo_max_speed << std::endl;
 	Util::AutomaticFunctionProfiler profileThisFunction(&SocialForcesGlobals::gPhaseProfilers->aiProfiler);
 	if (!enabled())
 	{
 		return;
 	}
 
+	if (!started) {
+		init_position = position();
+		started = true;
+	}
+
 	Util::AxisAlignedBox oldBounds(_position.x - _radius, _position.x + _radius, 0.0f, 0.0f, _position.z - _radius, _position.z + _radius);
+
+	/*
+	if (_color.r == 1.0f && _color.b == 0.5f) {
+		float t = frameNumber * 0.005;
+
+		_position.x = 16 * power3(sin(t));
+		_position.z = 13 * cos(t) - 5 * cos(t * 2) - 2 * cos(t * 3) - cos(t * 4);
+
+		Util::AxisAlignedBox newBounds(_position.x - _radius, _position.x + _radius, 0.0f, 0.0f, _position.z - _radius, _position.z + _radius);
+		getSimulationEngine()->getSpatialDatabase()->updateObject(this, oldBounds, newBounds);
+
+		//std::cerr << _id << std::endl;
+
+		return;
+	}
+	*/
 
 	SteerLib::AgentGoalInfo goalInfo = _goalQueue.front();
 	Util::Vector goalDirection;
 
-	// std::cout << "midtermpath empty: " << _midTermPath.empty() << std::endl;
-	if (!_midTermPath.empty() && (!this->hasLineOfSightTo(goalInfo.targetLocation)))
-	{
-		bool wandering = true;
-		// added by Bingchen, used to realize wandering, a random target location to go
-		if (wandering) {
-			//if( _color.r == Util::gRed.r ){
-			float x = ((float(rand()) / float(RAND_MAX)) * (95.0f - 5.5f)) + 5.5f;
-			float z = ((float(rand()) / float(RAND_MAX)) * (88.0f)) - 44.0f;
+	if (_color.r == 1.0f && _color.b != 1.0f ) {
 
-
-			_currentLocalTarget = { x, 0, z };
+		if (_color.g * 500 > frameNumber) {
+			return;
 		}
 
-		if (reachedCurrentWaypoint())
-		{
-			this->updateMidTermPath();
+		float t = (frameNumber - (_color.g - 0.4) * 500) * 0.005;
 
+		_position.x = -16 * power3(sin(t));
+		_position.z = 13 * cos(t) - 5 * cos(t * 2) - 2 * cos(t * 3) - cos(t * 4);
+
+		Util::AxisAlignedBox newBounds(_position.x - _radius, _position.x + _radius, 0.0f, 0.0f, _position.z - _radius, _position.z + _radius);
+		getSimulationEngine()->getSpatialDatabase()->updateObject(this, oldBounds, newBounds);
+
+		/*float x = -16 * power3(sin(t));
+		float z = 13 * cos(t) - 5 * cos(t * 2) - 2 * cos(t * 3) - cos(t * 4);
+
+		Util::Point next_point = { x, 0.0f , z };
+		goalDirection = normalize(next_point - position());
+		*/
+		return;
+	}
+
+	if (_color.r == 0.8f) {
+
+		if (_color.g * 500 > frameNumber) {
+				return;
 		}
-		this->updateLocalTarget();
 
-		goalDirection = normalize(_currentLocalTarget - position());
+		float t = (frameNumber - (_color.g - 0.4) * 500) * 0.005;
 
+		_position.x = 1.3 * (16 * power3(sin(t)));
+		_position.z = 1.3 * (13 * cos(t) - 5 * cos(t * 2) - 2 * cos(t * 3) - cos(t * 4));
+
+		Util::AxisAlignedBox newBounds(_position.x - _radius, _position.x + _radius, 0.0f, 0.0f, _position.z - _radius, _position.z + _radius);
+		getSimulationEngine()->getSpatialDatabase()->updateObject(this, oldBounds, newBounds);
+
+		//std::cerr << _id << std::endl;
+
+		return;
 	}
-	else
-	{
-		goalDirection = normalize(goalInfo.targetLocation - position());
+
+
+
+	//std::cerr << chase_id << std::endl;
+	std::vector<SteerLib::AgentInterface*> neighbor_agents = getNeighborAgents(8.0f);
+	/*
+	for (std::vector<SteerLib::AgentInterface *>::iterator tmp_ag = neighbor_agents.begin(); tmp_ag != neighbor_agents.end(); tmp_ag++) {
+		if ((*tmp_ag)->getColor().r == 1.0f && !(*tmp_ag)->isChased()) {
+			//
+			chase_id = 1;
+			(*tmp_ag)->setChased(true);
+			std::cerr << chase_id << std::endl;
+		}
+	}
+	*/
+
+
+
+	if (chase_id == 0) {
+		for (std::vector<SteerLib::AgentInterface *>::iterator tmp_ag = neighbor_agents.begin(); tmp_ag != neighbor_agents.end(); tmp_ag++) {
+
+			if (!(*tmp_ag)->isChased() && (*tmp_ag)->chase_id != id() && (*tmp_ag)->getColor().r != 1.0f && (*tmp_ag)->getColor().r != 0.8f) {
+				goalDirection = normalize((*tmp_ag)->position() - position());
+				chase_id = (*tmp_ag)->id();
+				(*tmp_ag)->setChased(true);
+				break;
+			}
+		}
+	}
+	else if (chase_id == 1) {
+		for (std::vector<SteerLib::AgentInterface *>::iterator tmp_ag = neighbor_agents.begin(); tmp_ag != neighbor_agents.end(); tmp_ag++) {
+			if ((*tmp_ag)->getColor().r == 1.0f ) {
+				goalDirection = normalize((*tmp_ag)->position() - position());
+				break;
+			}
+		}
+	
+	}
+	else {
+		for (std::vector<SteerLib::AgentInterface *>::iterator tmp_ag = neighbor_agents.begin(); tmp_ag != neighbor_agents.end(); tmp_ag++) {
+
+			if (chase_id == (*tmp_ag)->id()) {
+				goalDirection = normalize((*tmp_ag)->position() - position());
+				break;
+			}
+		}
 	}
 
-	// for the seek or flee force    written by Bingchen
-	Util::Vector prefForce = calcSeekAndFleeForce(goalDirection, dt);
-	//Util::Vector prefForce = calcPursueAndEvadeForce(goalDirection, dt);
+	//std::cerr << "snow " << init_position.z << std::endl;
+	if (init_position.z >= 30.0f) {
+		goalDirection = { 0.0f, 0.0f, -1.0f };
+		Util::Point feature_position = position().operator+( 2 * goalDirection);
+
+		Util::Vector direction = { 0.0f, 0.0f, 0.0f };
+		std::vector<SteerLib::AgentInterface*> neighbor_agents = getNeighborAgents(4.0f);
+
+		for (std::vector<SteerLib::AgentInterface *>::iterator tmp_ag = neighbor_agents.begin(); tmp_ag != neighbor_agents.end(); tmp_ag++) {
+			/*
+			if (distanceBetween(feature_position, (*tmp_ag)->position()) < 1.0f) {
+				goalDirection = { 1.0f, 0.0f, 2.0f };
+				break;
+			}
+			*/
+			goalDirection.operator+=( position() - (*tmp_ag)->position() );
+		}
+		//goalDirection = direction;
+	}
+
+	Util::Vector prefForce = (((goalDirection * 1.33) - velocity()) / (_SocialForcesParams.sf_acceleration / dt)); //assumption here
+	//prefForce = prefForce + velocity();
+	//_velocity = prefForce;
 
 	Util::Vector repulsionForce = calcRepulsionForce(dt);
 	if (repulsionForce.x != repulsionForce.x)
@@ -951,8 +1329,9 @@ void SocialForcesAgent::updateAI(float timeStamp, float dt, unsigned int frameNu
 		repulsionForce = velocity();
 		// throw GenericException("SocialForces numerical issue");
 	}
-	
 	Util::Vector proximityForce = calcProximityForce(dt);
+
+	Util:Vector avoidForce = calcUnalignedCollisionAvoidance();
 
 	// #define _DEBUG_ 1
 #ifdef _DEBUG_
@@ -960,23 +1339,53 @@ void SocialForcesAgent::updateAI(float timeStamp, float dt, unsigned int frameNu
 	std::cout << "agent" << id() << " proximity force " << proximityForce << std::endl;
 	std::cout << "agent" << id() << " pref force " << prefForce << std::endl;
 #endif
+	// _velocity = _newVelocity;
 	int alpha = 1;
 	if (repulsionForce.length() > 0.0)
 	{
 		alpha = 0;
 	}
 
-	// modified by bingchen
-	_velocity += (prefForce)+repulsionForce + proximityForce;
 
+  	total_force = (prefForce)+repulsionForce + proximityForce;
+
+	//std::cerr << "snow " << init_position.z << std::endl;
+	if (init_position.z >= 30.0f) {
+		
+	}
+
+	//total_force = repulsionForce + proximityForce ;
+
+	//total_force += queueForce ;
+	//total_force += _SocialForcesParams.c_cp_radius * avoidForce;
+
+	_velocity += total_force;
+
+	if (point_three_arrived && !point_four_arrived) {
+		_velocity*=2;
+	}
+
+	// _velocity = (prefForce);
+	// _velocity = velocity() + repulsionForce + proximityForce;
 
 	_velocity = clamp(velocity(), _SocialForcesParams.sf_max_speed);
 	_velocity.y = 0.0f;
+
+
+
 
 #ifdef _DEBUG_
 	std::cout << "agent" << id() << " speed is " << velocity().length() << std::endl;
 #endif
 	_position = position() + (velocity() * dt);
+
+	if (_color.r == 1.0f && _color.g == 0.9f && _color.b == 1.0f) {
+		if (position().z < -35) {
+			float new_x = -50.0f + (rand() / (RAND_MAX / 100.0f));
+			_position = { new_x, 0.0f, 40.0f };
+		}
+	}
+
 	// A grid database update should always be done right after the new position of the agent is calculated
 	/*
 	* Or when the agent is removed for example its true location will not reflect its location in the grid database.
@@ -1030,7 +1439,6 @@ void SocialForcesAgent::updateAI(float timeStamp, float dt, unsigned int frameNu
 	// _position = _position + (_velocity * dt);
 
 }
-
 
 void SocialForcesAgent::draw()
 {
